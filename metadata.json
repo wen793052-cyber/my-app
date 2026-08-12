@@ -1,0 +1,6 @@
+{
+  "name": "暖记 - 温馨日常日记与私密社区",
+  "description": "一款精致的日常日记应用，支持按日期分类、图文记录、浅色/深色模式、指纹锁隐私加密、云端数据同步以及私密社区好友互动。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
