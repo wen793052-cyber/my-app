@@ -1,0 +1,65 @@
+name: Build Debug APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      # AGP 9.1.x 要求 JDK 17+
+      - name: 配置 JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # 安装 Android SDK 命令行工具并自动接受所有许可协议
+      # 没有这一步，Gradle 在下载 compileSdk 36 / build-tools 时会因许可未接受而失败
+      - name: 配置 Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: 安装所需 SDK 组件
+        run: |
+          sdkmanager --install "platforms;android-36" "build-tools;36.0.0" > /dev/null
+
+      # 项目里 debug 签名配置指向 debug.keystore，但该文件被 .gitignore 排除，
+      # 仓库里不存在，CI 上必须现场生成一个，否则打包会在签名阶段失败
+      - name: 生成本地调试用签名 debug.keystore
+        run: |
+          keytool -genkeypair -v \
+            -keystore debug.keystore \
+            -storepass android -keypass android \
+            -alias androiddebugkey \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      # 项目里没有提交 gradlew/gradle-wrapper.jar，这里直接用官方 setup-gradle
+      # action 提供指定版本的 Gradle，不依赖仓库里是否有 wrapper 文件
+      - name: 配置 Gradle 9.1.0（匹配 AGP 9.1.1 要求）
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 9.1.0
+          cache-read-only: false
+
+      - name: 构建 Debug APK
+        run: gradle assembleDebug --no-daemon --stacktrace
+        env:
+          # google-services.json 缺失时，build.gradle.kts 里已设置 WARN 策略，
+          # 所以不提供该文件也能正常构建（Firebase 相关功能运行时会不可用）
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g"
+
+      - name: 上传 APK 产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: warmjournal-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
