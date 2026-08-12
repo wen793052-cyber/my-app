@@ -44,10 +44,13 @@ jobs:
 
       # 项目里没有提交 gradlew/gradle-wrapper.jar，这里直接用官方 setup-gradle
       # action 提供指定版本的 Gradle，不依赖仓库里是否有 wrapper 文件
-      - name: 配置 Gradle 9.1.0（匹配 AGP 9.1.1 要求）
+      # 注意：AGP 9.1.1 实测要求 Gradle 最低 9.3.1（比 AGP 9.1.0 系列文档写的
+      # 9.1.0 更高），版本号写低了会在应用 com.android.application 插件时
+      # 直接报错终止，务必保持这里 >= 9.3.1
+      - name: 配置 Gradle 9.3.1（匹配 AGP 9.1.1 要求）
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: 9.1.0
+          gradle-version: 9.3.1
           cache-read-only: false
 
       - name: 构建 Debug APK
